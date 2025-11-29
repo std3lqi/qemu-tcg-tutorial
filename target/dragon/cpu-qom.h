@@ -8,6 +8,8 @@
 
 struct DragonArchCPUClass {
     CPUClass parent_class;
+    DeviceRealize parent_realize;
+    ResettablePhases parent_phases;
 };
 
 OBJECT_DECLARE_CPU_TYPE(DragonArchCPU, DragonArchCPUClass, DRAGON_ARCH_CPU)
