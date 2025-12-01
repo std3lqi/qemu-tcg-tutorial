@@ -1,0 +1,32 @@
+
+&rd_rj_rk       rd rj rk
+&rd_rj_si12     rd rj si12
+&rd_si20        rd si20
+&rd_rj          rd rj
+&rj_rd_offs     rj rd offs
+&offs           offs
+
+%offs16         10:s16          !function=shl_2
+%offs26         0:s10 10:16     !function=shl_2
+
+@op_rd_rj_rk    .... .... .... .... . rk:5  rj:5 rd:5   &rd_rj_rk
+@op_rd_rj_si12  .... .... .. si12:12        rj:5 rd:5   &rd_rj_si12
+@op_rd_si20     .... ... si20:20                 rd:5   &rd_si20
+@op_rd_rj       .... .... .... .... .... .. rj:5 rd:5   &rd_rj
+@op_rj_rd_offs  .... .... .... .... .... .. rj:5 rd:5   &rj_rd_offs offs=%offs16
+@op_offs        .... .... .... .... .... .... .... .... &offs offs=%offs26
+
+ADD_W           0000 0000 0001 0000 0... .... .... ....     @op_rd_rj_rk
+ADD_D           0000 0000 0001 0000 1... .... .... ....     @op_rd_rj_rk
+ADDI_W          0000 0010 10.. .... .... .... .... ....     @op_rd_rj_si12
+ADDI_D          0000 0010 11.. .... .... .... .... ....     @op_rd_rj_si12
+LU12I_W         0001 010. .... .... .... .... .... ....     @op_rd_si20
+LU32I_D         0001 011. .... .... .... .... .... ....     @op_rd_si20
+BITREV_W        0000 0000 0000 0000 0101 00.. .... ....     @op_rd_rj
+BITREV_D        0000 0000 0000 0000 0101 01.. .... ....     @op_rd_rj
+LD_W            0010 1000 10.. .... .... .... .... ....     @op_rd_rj_si12
+LD_D            0010 1000 11.. .... .... .... .... ....     @op_rd_rj_si12
+ST_W            0010 1001 10.. .... .... .... .... ....     @op_rd_rj_si12
+ST_D            0010 1001 11.. .... .... .... .... ....     @op_rd_rj_si12
+BEQ             0101 10.. .... .... .... .... .... ....     @op_rj_rd_offs
+B               0101 00.. .... .... .... .... .... ....     @op_offs
