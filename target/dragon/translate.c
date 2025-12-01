@@ -2,17 +2,98 @@
 #include "disas/disas.h"
 #include "exec/translator.h"
 #include "cpu.h"
+#include "tcg/tcg-op.h"
+
+static TCGv cpu_r[NUM_OF_GPR];
+static TCGv pc;
 
 typedef struct DisasContext {
     DisasContextBase base;
+    DragonCPUArchState *env;
+    uint64_t pc;
 } DisasContext;
 
 void dragon_tcg_init(void) {
-    // TODO;
+    for (int i = 0; i < NUM_OF_GPR; i++) {
+        // TCGv_i64 tcg_global_mem_new_i64(TCGv_ptr reg, intptr_t off, 
+        //                                 const char *name)
+        cpu_r[i] = tcg_global_mem_new(tcg_env,
+                                      offsetof(DragonCPUArchState, gpr[i]),
+                                      dragon_arch_cpu_gpr_names[i]);
+    }
+    pc = tcg_global_mem_new(tcg_env,
+                            offsetof(DragonCPUArchState, pc),
+                            "pc");
+}
+
+static void dragon_tcg_init_disas_context(DisasContextBase *db, CPUState *cpu) {
+    DisasContext *ctx = container_of(db, DisasContext, base);
+    ctx->env = cpu_env(cpu);
+    ctx->pc = db->pc_first;
+}
+
+static void dragon_tcg_tb_start(DisasContextBase *db, CPUState *cpu) {
+    // Do nothing
+}
+
+static void dragon_tcg_insn_start(DisasContextBase *db, CPUState *cpu) {
+    tcg_gen_insn_start(db->pc_next);
+}
+
+static inline int shl_2(DisasContext *ctx, int x) {
+    return x << 2;
+}
+
+bool decode_insn(DisasContext *ctx, uint32_t insn);
+#include "decode-insn.c.inc"
+
+static void dragon_tcg_translation_insn(DisasContextBase *db, CPUState *cpu) {
+    DisasContext *ctx = container_of(db, DisasContext, base);
+    // pc <= db->pc_next
+    tcg_gen_movi_tl(pc, db->pc_next);   
+
+    // Load instruction image
+    // translator_ldl(CPUArchState *env, DisasContextBase *db, vaddr pc)
+    uint32_t insn = translator_ldl(ctx->env, db, db->pc_next);
+
+    // bool decode_insn(DisasContext *ctx, uint32_t insn)
+    bool decoded = decode_insn(ctx, insn);
+    if (!decoded) {
+        error_report("Illegal instruction, pc: 0x%08lX, inst: 0x%08X\n",
+                    db->pc_next, insn);
+        // TODO: throw exception
+    }
+    db->pc_next += 4;
+}
+
+static void dragon_tcg_tb_stop(DisasContextBase *db, CPUState *cpu) {
+    // DisasContext *ctx = container_of(db, DisasContext, base);
+    switch(db->is_jmp) {
+        case DISAS_NEXT:
+            break;
+        case DISAS_TOO_MANY:
+            // TODO
+            break;
+        case DISAS_NORETURN:
+            break;
+        default:
+            g_assert_not_reached();
+    }
+}
+
+static bool dragon_tcg_disas_log(const DisasContextBase *db, CPUState *cpu, 
+                                 FILE *f) {
+    return false;
 }
 
 static const TranslatorOps dragon_tr_ops = {
     // TODO:
+    .init_disas_context = dragon_tcg_init_disas_context,
+    .tb_start = dragon_tcg_tb_start,
+    .insn_start = dragon_tcg_insn_start,
+    .translate_insn = dragon_tcg_translation_insn,
+    .tb_stop = dragon_tcg_tb_stop,
+    .disas_log = dragon_tcg_disas_log,
 };
 
 void dragon_tcg_translate_code(CPUState *cpu, TranslationBlock *tb,
@@ -23,13 +104,6 @@ void dragon_tcg_translate_code(CPUState *cpu, TranslationBlock *tb,
     DisasContext dc = {};
     translator_loop(cpu, tb, max_insns, pc, host_pc, &dragon_tr_ops, &dc.base);                           
 }
-
-static inline int shl_2(DisasContext *ctx, int x) {
-    return x << 2;
-}
-
-bool decode_insn(DisasContext *ctx, uint32_t insn);
-#include "decode-insn.c.inc"
 
 static bool trans_ADD_W(DisasContext *ctx, arg_ADD_W *a) {
     return false;
