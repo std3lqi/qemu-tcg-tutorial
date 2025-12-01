@@ -106,10 +106,27 @@ void dragon_tcg_translate_code(CPUState *cpu, TranslationBlock *tb,
 }
 
 static bool trans_ADD_W(DisasContext *ctx, arg_ADD_W *a) {
-    return false;
+    TCGv_i32 Rd = tcg_temp_new_i32();
+    TCGv_i32 Rj = tcg_temp_new_i32();
+    TCGv_i32 Rk = tcg_temp_new_i32();
+    // tmp = GR[rj][31:0] + GR[rk][31:0]
+    tcg_gen_trunc_tl_i32(Rj, cpu_r[a->rj]);
+    tcg_gen_trunc_tl_i32(Rk, cpu_r[a->rk]);
+    tcg_gen_add_i32(Rd, Rj, Rk);
+    // GR[rd] = SignExtend(tmp[31:0],GRLEN)
+    tcg_gen_ext_i32_i64(cpu_r[a->rd], Rd);
+    return true;
 }
 static bool trans_ADD_D(DisasContext *ctx, arg_ADD_D *a) {
-    return false;
+    TCGv Rd = tcg_temp_new();
+    TCGv Rj = cpu_r[a->rj];
+    TCGv Rk = cpu_r[a->rk];
+    // tmp = GR[rj][63:0] + GR[rk][63:0]
+    tcg_gen_add_tl(Rd, Rj, Rk);
+    // GR[rd] = tmp[63:0]
+    cpu_r[a->rd] = Rd;
+    // tcg_gen_add_tl(cpu_r[a->rd], cpu_r[a->rj], cpu_r[a->rk]);
+    return true;
 }
 static bool trans_ADDI_W(DisasContext *ctx, arg_ADDI_W *a) {
     return false;
@@ -118,10 +135,21 @@ static bool trans_ADDI_D(DisasContext *ctx, arg_ADDI_D *a) {
     return false;
 }
 static bool trans_LU12I_W(DisasContext *ctx, arg_LU12I_W *a) {
-    return false;
+    TCGv Rd = tcg_temp_new();
+    TCGv T = tcg_temp_new();
+    // GR[rd] = SignExtend({si20, 12'b0}, GRLEN)
+    tcg_gen_movi_tl(T, a->si20);
+    tcg_gen_shli_tl(Rd, T, 12);
+    cpu_r[a->rd] = Rd;
+    return true; 
 }
 static bool trans_LU32I_D(DisasContext *ctx, arg_LU32I_D *a) {
-    return false;
+    TCGv Rd = cpu_r[a->rd];
+    TCGv T = tcg_temp_new();
+    // GR[rd] = {SignExtend(si20, 32), GR[rd][31:0]}
+    tcg_gen_movi_tl(T, a->si20);
+    tcg_gen_deposit_tl(cpu_r[a->rd], Rd, T, 32, 32);
+    return true;
 }
 static bool trans_BITREV_W(DisasContext *ctx, arg_BITREV_W *a) {
     return false;
