@@ -140,10 +140,23 @@ static bool trans_ADD_D(DisasContext *ctx, arg_ADD_D *a) {
     return true;
 }
 static bool trans_ADDI_W(DisasContext *ctx, arg_ADDI_W *a) {
-    return false;
+    TCGv_i32 Rj = tcg_temp_new_i32();
+    TCGv_i32 T = tcg_temp_new_i32();
+    // tmp = GR[rj][31:0] + SignExtend(si12, 32)
+    tcg_gen_trunc_tl_i32(Rj, cpu_r[a->rj]);
+    tcg_gen_movi_i32(T, a->si12);
+    tcg_gen_add_i32(T, Rj, T);
+    // GR[rd] = SignExtend(tmp[31:0], GRLEN)
+    tcg_gen_ext_i32_i64(cpu_r[a->rd], T);
+    return true;
 }
 static bool trans_ADDI_D(DisasContext *ctx, arg_ADDI_D *a) {
-    return false;
+    TCGv T = tcg_temp_new();
+    // tmp = GR[rj][63:0] + SignExtend(si12, 64)
+    tcg_gen_addi_tl(T, cpu_r[a->rj], a->si12);
+    // GR[rd] = tmp[63:0]
+    tcg_gen_mov_tl(cpu_r[a->rd], T);
+    return true;
 }
 static bool trans_LU12I_W(DisasContext *ctx, arg_LU12I_W *a) {
     TCGv Rd = tcg_temp_new();
@@ -169,19 +182,68 @@ static bool trans_BITREV_D(DisasContext *ctx, arg_BITREV_D *a) {
     return false;
 }
 static bool trans_LD_W(DisasContext *ctx, arg_LD_W *a) {
-    return false;
+    TCGv VAddr = tcg_temp_new();
+    TCGv PAddr = tcg_temp_new();
+    TCGv_i32 T = tcg_temp_new_i32();
+    // vaddr = GR[rj] + SignExtend(si12, GRLEN)
+    tcg_gen_addi_tl(VAddr, cpu_r[a->rj], a->si12);
+    // AddressComplianceCheck(vaddr)
+    // paddr = AddressTranslation(vaddr)
+    tcg_gen_mov_tl(PAddr, VAddr);
+    // word = MemoryLoad(paddr, WORD)
+    tcg_gen_qemu_ld_i32(T, PAddr, 0, MO_32);
+    // GR[rd] = SignExtend(word, GRLEN)
+    tcg_gen_ext_i32_i64(cpu_r[a->rd], T);
+    return true;
 }
 static bool trans_LD_D(DisasContext *ctx, arg_LD_D *a) {
-    return false;
+    TCGv VAddr = tcg_temp_new();
+    TCGv PAddr = tcg_temp_new();
+    // vaddr = GR[rj] + SignExtend(si12, GRLEN)
+    tcg_gen_addi_tl(VAddr, cpu_r[a->rj], a->si12);
+    // AddressComplianceCheck(vaddr)
+    // paddr = AddressTranslation(vaddr)
+    tcg_gen_mov_tl(PAddr, VAddr);
+    // GR[rd] = MemoryLoad(paddr, DOUBLEWORD)
+    tcg_gen_qemu_ld_i64(cpu_r[a->rd], PAddr, 0, MO_64);
+    return true;
 }
 static bool trans_ST_W(DisasContext *ctx, arg_ST_W *a) {
-    return false;
+    TCGv VAddr = tcg_temp_new();
+    TCGv PAddr = tcg_temp_new();
+    TCGv_i32 T = tcg_temp_new_i32();
+    // vaddr = GR[rj] + SignExtend(si12, GRLEN)
+    tcg_gen_addi_tl(VAddr, cpu_r[a->rj], a->si12);
+    // AddressComplianceCheck(vaddr)
+    // paddr = AddressTranslation(vaddr)
+    tcg_gen_mov_tl(PAddr, VAddr);
+    // MemoryStore(GR[rd][31:0], paddr, WORD)
+    tcg_gen_trunc_tl_i32(T, cpu_r[a->rd]);
+    tcg_gen_qemu_st_i32(T, PAddr, 0, MO_32);
+    return true;
 }
 static bool trans_ST_D(DisasContext *ctx, arg_ST_D *a) {
-    return false;
+    TCGv VAddr = tcg_temp_new();
+    TCGv PAddr = tcg_temp_new();
+    // vaddr = GR[rj] + SignExtend(si12, GRLEN)
+    tcg_gen_addi_tl(VAddr, cpu_r[a->rj], a->si12);
+    // AddressComplianceCheck(vaddr)
+    // paddr = AddressTranslation(vaddr)
+    tcg_gen_mov_tl(PAddr, VAddr);
+    // MemoryStore(GR[rd][63:0], paddr, DOUBLEWORD)
+    tcg_gen_qemu_st_i64(cpu_r[a->rd], PAddr, 0, MO_64);
+    return true;
 }
 static bool trans_BEQ(DisasContext *ctx, arg_BEQ *a) {
-    return false;
+    TCGLabel *label = gen_new_label();
+    // if GR[rj] == GR[rd]:
+    //   PC = PC + SignExtend({offs16, 2'b0}, GRLEN)
+    tcg_gen_brcond_tl(TCG_COND_EQ, cpu_r[a->rj], cpu_r[a->rd], label);
+    gen_goto_tb(ctx, 0, ctx->base.pc_next + 4);
+    gen_set_label(label);
+    gen_goto_tb(ctx, 1, ctx->base.pc_next + a->offs);
+    ctx->base.is_jmp = DISAS_NORETURN;
+    return true;
 }
 static bool trans_B(DisasContext *ctx, arg_B *a) {
     // PC = PC + SignExtend({offs26, 2' b0}, GRLEN)
