@@ -26,6 +26,7 @@ static void dragon_arch_cpu_realize(DeviceState *dev, Error **errp) {
     }
 
     qemu_init_vcpu(cpu);
+    cpu_reset(cpu);
 
     dragon->parent_realize(dev, errp);
 }

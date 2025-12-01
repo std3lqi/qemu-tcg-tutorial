@@ -66,13 +66,24 @@ static void dragon_tcg_translation_insn(DisasContextBase *db, CPUState *cpu) {
     db->pc_next += 4;
 }
 
+static void gen_goto_tb(DisasContext *ctx, int tb_slot_idx, vaddr dest) {
+    if (translator_use_goto_tb(&ctx->base, dest)) {
+        tcg_gen_goto_tb(tb_slot_idx);
+        tcg_gen_movi_tl(pc, dest);
+        tcg_gen_exit_tb(ctx->base.tb, tb_slot_idx);
+    } else {
+        tcg_gen_movi_tl(pc, dest);
+        tcg_gen_lookup_and_goto_ptr();
+    }
+}
+
 static void dragon_tcg_tb_stop(DisasContextBase *db, CPUState *cpu) {
-    // DisasContext *ctx = container_of(db, DisasContext, base);
+    DisasContext *ctx = container_of(db, DisasContext, base);
     switch(db->is_jmp) {
         case DISAS_NEXT:
             break;
         case DISAS_TOO_MANY:
-            // TODO
+            gen_goto_tb(ctx, 1, db->pc_next);
             break;
         case DISAS_NORETURN:
             break;
@@ -173,5 +184,9 @@ static bool trans_BEQ(DisasContext *ctx, arg_BEQ *a) {
     return false;
 }
 static bool trans_B(DisasContext *ctx, arg_B *a) {
-    return false;
+    // PC = PC + SignExtend({offs26, 2' b0}, GRLEN)
+    int disp = a->offs;
+    gen_goto_tb(ctx, 0, ctx->base.pc_next + disp);
+    ctx->base.is_jmp = DISAS_NORETURN;
+    return true;
 }
