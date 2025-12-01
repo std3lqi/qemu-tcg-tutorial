@@ -26,4 +26,8 @@ static const char dragon_arch_cpu_gpr_names[NUM_OF_GPR][8] = {
     "r24","r25","r26","r27","r28","r29","r30","r31"
 };
 
+void dragon_tcg_init(void);
+void dragon_tcg_translate_code(CPUState *cpu, TranslationBlock *tb,
+                           int *max_insns, vaddr pc, void *host_pc);
+
 #endif // DRAGON_CPU_H

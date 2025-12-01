@@ -7,6 +7,23 @@ typedef struct DisasContext {
     DisasContextBase base;
 } DisasContext;
 
+void dragon_tcg_init(void) {
+    // TODO;
+}
+
+static const TranslatorOps dragon_tr_ops = {
+    // TODO:
+};
+
+void dragon_tcg_translate_code(CPUState *cpu, TranslationBlock *tb,
+                           int *max_insns, vaddr pc, void *host_pc) {
+// void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
+//                      vaddr pc, void *host_pc, const TranslatorOps *ops,
+//                      DisasContextBase *db)
+    DisasContext dc = {};
+    translator_loop(cpu, tb, max_insns, pc, host_pc, &dragon_tr_ops, &dc.base);                           
+}
+
 static inline int shl_2(DisasContext *ctx, int x) {
     return x << 2;
 }

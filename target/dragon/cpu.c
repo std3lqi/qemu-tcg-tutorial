@@ -4,6 +4,11 @@
 #include "cpu-qom.h"
 #include "qemu/qemu-print.h"
 #include "qapi/error.h"
+#include "hw/core/sysemu-cpu-ops.h"
+#include "accel/tcg/cpu-ops.h"
+#include "accel/tcg/tb-cpu-state.h"
+#include "exec/cputlb.h"
+#include "exec/target_page.h"
 
 static void dragon_arch_cpu_init(Object *obj) {
     // Do nothing
@@ -62,6 +67,69 @@ static void dragon_arch_cpu_set_pc(CPUState *cpu, vaddr value) {
     env->pc = value;
 }
 
+static bool dragon_arch_cpu_has_work(CPUState *cpu) {
+    return false;
+}
+
+static TCGTBCPUState dragon_tcg_get_tb_cpu_state(CPUState *cs) {
+    DragonArchCPU *dragon = DRAGON_ARCH_CPU(cs);
+    DragonCPUArchState *env = &dragon->env;
+    return (TCGTBCPUState) {
+        .pc = env->pc,
+        .flags = 0,
+        .cflags = 0,
+        .cs_base = 0
+    };
+}
+
+static int dragon_tcg_mmu_index(CPUState *cpu, bool ifetch) {
+    return 0;
+}
+
+static void dragon_tcg_do_interrupt(CPUState *cpu) {
+    // Do nothing
+}
+
+static bool dragon_tcg_cpu_exec_interrupt(CPUState *cpu, int interrupt_request) {
+    return false;
+}
+
+static void dragon_tcg_cpu_exec_reset(CPUState *cpu) {
+    // Do nothing
+}
+
+static bool dragon_tcg_cpu_exec_halt(CPUState *cpu) {
+    return dragon_arch_cpu_has_work(cpu);
+}
+
+static bool dragon_tcg_tlb_fill(CPUState *cpu, vaddr address, int size,
+                     MMUAccessType access_type, int mmu_idx,
+                     bool probe, uintptr_t retaddr) {
+    int prot = PAGE_READ | PAGE_WRITE | PAGE_EXEC;
+// void tlb_set_page(CPUState *cpu, vaddr addr,
+//                   hwaddr paddr, int prot,
+//                   int mmu_idx, vaddr size)                        
+    tlb_set_page(cpu, address, address, prot, mmu_idx, TARGET_PAGE_SIZE);
+    return true;
+}
+
+static const struct SysemuCPUOps dragon_sysemu_ops = {
+    .has_work = dragon_arch_cpu_has_work,
+};
+
+static const struct TCGCPUOps dragon_tcg_ops = {
+    .initialize = dragon_tcg_init,
+    .translate_code = dragon_tcg_translate_code,
+    .get_tb_cpu_state = dragon_tcg_get_tb_cpu_state,
+    .mmu_index = dragon_tcg_mmu_index,
+    .do_interrupt = dragon_tcg_do_interrupt,
+    .cpu_exec_interrupt = dragon_tcg_cpu_exec_interrupt,
+    .cpu_exec_reset = dragon_tcg_cpu_exec_reset,
+    .cpu_exec_halt = dragon_tcg_cpu_exec_halt,
+    .tlb_fill = dragon_tcg_tlb_fill,
+    .pointer_wrap = cpu_pointer_wrap_notreached,
+};
+
 static void dragon_arch_cpu_class_init(ObjectClass *klass, const void *data) {
     DeviceClass *dc = DEVICE_CLASS(klass);
     CPUClass *cc = CPU_CLASS(klass);
@@ -89,6 +157,9 @@ static void dragon_arch_cpu_class_init(ObjectClass *klass, const void *data) {
     cc->class_by_name = dragon_arch_cpu_class_by_name;
     cc->dump_state = dragon_arch_cpu_dump_state;
     cc->set_pc = dragon_arch_cpu_set_pc;
+
+    cc->sysemu_ops = &dragon_sysemu_ops;
+    cc->tcg_ops = &dragon_tcg_ops;
 }
 
 static const TypeInfo dragon_arch_cpu_types[] = {
