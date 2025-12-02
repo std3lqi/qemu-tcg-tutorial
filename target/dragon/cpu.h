@@ -29,5 +29,5 @@ static const char dragon_arch_cpu_gpr_names[NUM_OF_GPR][8] = {
 void dragon_tcg_init(void);
 void dragon_tcg_translate_code(CPUState *cpu, TranslationBlock *tb,
                            int *max_insns, vaddr pc, void *host_pc);
-
+int dragon_arch_cpu_print_insn(bfd_vma addr, struct disassemble_info *info);
 #endif // DRAGON_CPU_H

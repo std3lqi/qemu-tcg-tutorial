@@ -50,7 +50,7 @@ static inline int shl_2(DisasContext *ctx, int x) {
     return x << 2;
 }
 
-bool decode_insn(DisasContext *ctx, uint32_t insn);
+static bool decode_insn(DisasContext *ctx, uint32_t insn);
 #include "decode-insn.c.inc"
 
 static void dragon_tcg_translation_insn(DisasContextBase *db, CPUState *cpu) {

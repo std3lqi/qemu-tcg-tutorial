@@ -10,6 +10,7 @@ dragon_softmmu_ss = ss.source_set()
 dragon_ss.add(gen)
 dragon_ss.add(files(
     'cpu.c',
+    'disas.c',
     'helper.c',
     'translate.c',
 ))

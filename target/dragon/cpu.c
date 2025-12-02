@@ -138,6 +138,15 @@ static const struct TCGCPUOps dragon_tcg_ops = {
     .restore_state_to_opc = dragon_tcg_restore_state_to_opc,
 };
 
+static void dragon_arch_cpu_disas_set_info(CPUState *cpu, 
+    disassemble_info *info) {
+    info->flavour = bfd_target_unknown_flavour;
+    info->arch = bfd_arch_dragon;
+    info->mach = 0;
+    info->endian = BFD_ENDIAN_LITTLE;
+    info->print_insn = dragon_arch_cpu_print_insn;
+}
+
 static void dragon_arch_cpu_class_init(ObjectClass *klass, const void *data) {
     DeviceClass *dc = DEVICE_CLASS(klass);
     CPUClass *cc = CPU_CLASS(klass);
@@ -168,6 +177,7 @@ static void dragon_arch_cpu_class_init(ObjectClass *klass, const void *data) {
 
     cc->sysemu_ops = &dragon_sysemu_ops;
     cc->tcg_ops = &dragon_tcg_ops;
+    cc->disas_set_info = dragon_arch_cpu_disas_set_info;
 }
 
 static const TypeInfo dragon_arch_cpu_types[] = {
