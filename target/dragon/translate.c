@@ -67,7 +67,8 @@ static void dragon_tcg_translation_insn(DisasContextBase *db, CPUState *cpu) {
     if (!decoded) {
         error_report("Illegal instruction, pc: 0x%08lX, inst: 0x%08X\n",
                     db->pc_next, insn);
-        // TODO: throw exception
+        gen_helper_raise_illegal_instruction(tcg_env);
+        db->is_jmp = DISAS_NORETURN;
     }
     db->pc_next += 4;
 }

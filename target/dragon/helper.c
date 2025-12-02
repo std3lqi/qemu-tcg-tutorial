@@ -1,6 +1,15 @@
 #include "qemu/osdep.h"
 #include "exec/helper-proto.h"
 #include "cpu.h"
+#include "exec/cpu-common.h"
+#include "hw/core/cpu.h"
+
+G_NORETURN void helper_raise_illegal_instruction(DragonCPUArchState *env) {
+    CPUState *cs = env_cpu(env);
+    cs->exception_index = 99;
+    // cpu_loop_exit_restore(cs, GETPC());
+    cpu_abort(cs, "Abort due to illegal instruction");
+}
 
 // DEF_HELPER_3(bitrev_w, void, env, i32, i32)
 void helper_bitrev_w(DragonCPUArchState *env, uint32_t rd, uint32_t rj) {
