@@ -114,6 +114,12 @@ static bool dragon_tcg_tlb_fill(CPUState *cpu, vaddr address, int size,
     return true;
 }
 
+static void dragon_tcg_restore_state_to_opc(CPUState *cpu, 
+    const TranslationBlock *tb, const uint64_t *data) {
+    DragonArchCPU *dragon = DRAGON_ARCH_CPU(cpu);
+    dragon->env.pc = data[0];
+}
+
 static const struct SysemuCPUOps dragon_sysemu_ops = {
     .has_work = dragon_arch_cpu_has_work,
 };
@@ -129,6 +135,7 @@ static const struct TCGCPUOps dragon_tcg_ops = {
     .cpu_exec_halt = dragon_tcg_cpu_exec_halt,
     .tlb_fill = dragon_tcg_tlb_fill,
     .pointer_wrap = cpu_pointer_wrap_notreached,
+    .restore_state_to_opc = dragon_tcg_restore_state_to_opc,
 };
 
 static void dragon_arch_cpu_class_init(ObjectClass *klass, const void *data) {

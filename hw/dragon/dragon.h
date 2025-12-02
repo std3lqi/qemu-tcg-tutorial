@@ -12,11 +12,13 @@ struct DragonCPUState {
     SysBusDevice parent_obj;
     DragonArchCPU cpu;
     MemoryRegion flash;
+    MemoryRegion memory;
 };
 
 struct DragonCPUClass {
     SysBusDeviceClass parent_class;
     size_t flash_size;
+    size_t memory_size;
 };
 
 #define TYPE_DRAGON_CPU "DRAGON_CPU"

@@ -165,12 +165,12 @@ static bool trans_ADDI_D(DisasContext *ctx, arg_ADDI_D *a) {
     return true;
 }
 static bool trans_LU12I_W(DisasContext *ctx, arg_LU12I_W *a) {
-    TCGv Rd = tcg_temp_new();
-    TCGv T = tcg_temp_new();
+    TCGv_i32 Rd = tcg_temp_new_i32();
+    TCGv_i32 T = tcg_temp_new_i32();
     // GR[rd] = SignExtend({si20, 12'b0}, GRLEN)
-    tcg_gen_movi_tl(T, a->si20);
-    tcg_gen_shli_tl(Rd, T, 12);
-    cpu_r[a->rd] = Rd;
+    tcg_gen_movi_i32(T, a->si20);
+    tcg_gen_shli_i32(Rd, T, 12);
+    tcg_gen_ext_i32_i64(cpu_r[a->rd], Rd);
     return true; 
 }
 static bool trans_LU32I_D(DisasContext *ctx, arg_LU32I_D *a) {

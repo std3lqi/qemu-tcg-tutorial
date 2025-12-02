@@ -32,6 +32,10 @@ static void dragon_cpu_realize(DeviceState *dev, Error **errp) {
     //                                 MemoryRegion *subregion);
     memory_region_add_subregion(get_system_memory(), 0xC0000000,
                                 &cpu_state->flash);
+    memory_region_init_ram(&cpu_state->memory, OBJECT(dev), "memory", 
+                           cpu_class->memory_size, &error_abort);
+    memory_region_add_subregion(get_system_memory(), 0xffffffffd0000000,
+                                &cpu_state->memory);
 }
 
 static void dragon_cpu_class_init(ObjectClass *klass, const void *data) {
@@ -40,6 +44,7 @@ static void dragon_cpu_class_init(ObjectClass *klass, const void *data) {
 
     DragonCPUClass *cpu_class = DRAGON_CPU_CLASS(klass);
     cpu_class->flash_size = 1 * MiB;
+    cpu_class->memory_size = 1 * MiB;
 }
 
 static const TypeInfo dragon_cpu_types[] = {
