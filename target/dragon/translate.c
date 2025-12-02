@@ -3,6 +3,12 @@
 #include "exec/translator.h"
 #include "cpu.h"
 #include "tcg/tcg-op.h"
+#include "exec/helper-proto.h"
+#include "exec/helper-gen.h"
+
+#define HELPER_H "helper.h"
+#include "exec/helper-info.c.inc"
+#undef HELPER_H
 
 static TCGv cpu_r[NUM_OF_GPR];
 static TCGv pc;
@@ -176,10 +182,19 @@ static bool trans_LU32I_D(DisasContext *ctx, arg_LU32I_D *a) {
     return true;
 }
 static bool trans_BITREV_W(DisasContext *ctx, arg_BITREV_W *a) {
-    return false;
+    // bstr32[31:0] = BITREV(GR[rj][31:0])
+    // GR[rd] = SignExtend(bstr32, GRLEN)
+    // void helper_bitrev_w(DragonCPUArchState *env, uint32_t rd, uint32_t rj)
+    gen_helper_bitrev_w(tcg_env, tcg_constant_i32(a->rd), 
+        tcg_constant_i32(a->rj));
+    return true;
 }
 static bool trans_BITREV_D(DisasContext *ctx, arg_BITREV_D *a) {
-    return false;
+    // GR[rd] = BITREV(GR[rj][63:0])
+    // void helper_bitrev_d(DragonCPUArchState *env, uint32_t rd, uint32_t rj)
+    gen_helper_bitrev_d(tcg_env, tcg_constant_i32(a->rd), 
+        tcg_constant_i32(a->rj));
+    return true;
 }
 static bool trans_LD_W(DisasContext *ctx, arg_LD_W *a) {
     TCGv VAddr = tcg_temp_new();
